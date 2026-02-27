@@ -36,3 +36,11 @@ export interface Invoice {
   grand_total: number;
   items: InvoiceItem[];
 }
+
+export interface CustomerAddress {
+  id: string;
+  customer_name: string;
+  customer_address: string;
+  customer_phone: string;
+  customer_gstin?: string;
+}

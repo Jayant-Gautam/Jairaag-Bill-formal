@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Plus, Trash2, FileDown } from 'lucide-react';
-import { supabase, Product, Invoice, InvoiceItem } from '../lib/supabase';
+import { supabase, Product, Invoice, InvoiceItem, CustomerAddress } from '../lib/supabase';
 import { generateInvoicePDF } from '../utils/pdfGenerator';
 
 export default function InvoiceForm() {
@@ -16,6 +16,8 @@ export default function InvoiceForm() {
   const [invoiceDate, setInvoiceDate] = useState(
     new Date().toISOString().split('T')[0]
   );
+  const [customerAddresses, setCustomerAddresses] = useState<CustomerAddress[]>([]);
+  const [selectedCustomerAddress, setSelectedCustomerAddress] = useState('');
 
   const [items, setItems] = useState<Array<{
     productId: string;
@@ -25,7 +27,25 @@ export default function InvoiceForm() {
 
   useEffect(() => {
     loadProducts();
+    loadCustomerAddresses();
   }, []);
+
+  const loadCustomerAddresses = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('customer_address')
+        .select('*')
+        .order('customer_name');
+
+      if (error) throw error;
+      // We can use this data to implement a dropdown for existing customers in the future
+      setCustomerAddresses(data || []);
+    } catch (error) {
+      console.error('Error loading customer addresses:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const loadProducts = async () => {
     try {
@@ -110,7 +130,7 @@ export default function InvoiceForm() {
       const lastNumber = parseInt(data.invoice_number);
       return (lastNumber + 1).toString();
     }
-    return '146';
+    return '147';
   };
 
   const handleGeneratePDF = async () => {
@@ -165,6 +185,26 @@ export default function InvoiceForm() {
 
       generateInvoicePDF(invoiceData);
 
+      const q = await supabase
+        .from('customer_address')
+        .select('customer_name')
+        .eq('customer_name', customerName)
+        .maybeSingle();
+
+      if (!q.data) {
+        const { error: addError } = await supabase
+          .from('customer_address')
+          .insert({
+            customer_name: customerName,
+            customer_address: customerAddress,
+            customer_phone: customerPhone,
+            customer_gstin: customerGstin ? customerGstin : null
+          });
+
+        if (addError) throw addError;
+      }
+
+
       setCustomerName('');
       setCustomerAddress('');
       setCustomerPhone('');
@@ -179,6 +219,24 @@ export default function InvoiceForm() {
 
   const { subTotal, totalTax, grandTotal } = calculateTotals();
 
+  const handleAddress = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const selectedId = e.target.value;
+    setSelectedCustomerAddress(selectedId);
+
+    const address = customerAddresses.find(addr => addr.id === selectedId);
+    if (address) {
+      setCustomerName(address.customer_name);
+      setCustomerAddress(address.customer_address);
+      setCustomerPhone(address.customer_phone);
+      setCustomerGstin(address.customer_gstin || '');
+    } else {
+      setCustomerName('');
+      setCustomerAddress('');
+      setCustomerPhone('');
+      setCustomerGstin('');
+    }
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -188,7 +246,21 @@ export default function InvoiceForm() {
   }
 
   return (
+
     <div className="min-h-screen bg-gray-50 py-6 px-4">
+
+      <div className="max-w-4xl mx-auto mb-6 p-4 bg-white rounded-lg shadow">
+        <label className=''>Choose Address</label>
+        <select value={selectedCustomerAddress} onChange={handleAddress} className='w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-green-500 focus:border-transparent mb-4'>
+          <option value="">Select an address</option>
+          {customerAddresses.map((address) => (
+            <option key={address.id} value={address.id}>
+              {address.customer_name}
+            </option>
+          ))}
+        </select>
+      </div>
+
       <div className="max-w-4xl mx-auto">
         <div className="bg-white rounded-lg shadow-lg p-6">
           <div className="mb-8 text-center border-b pb-4">

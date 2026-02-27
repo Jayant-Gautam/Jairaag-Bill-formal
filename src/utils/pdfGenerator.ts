@@ -10,172 +10,183 @@ export const generateInvoicePDF = (invoiceData: Invoice) => {
   });
 
   const pageWidth = doc.internal.pageSize.getWidth();
-  const pageHeight = doc.internal.pageSize.getHeight();
   const margin = 10;
+
+  /* ================= HEADER ================= */
 
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(14);
-  doc.text('M/s A.D. TRADERS', pageWidth / 2, 20, { align: 'center' });
+  doc.text('M/s A.D. TRADERS', pageWidth / 2, 18, { align: 'center' });
 
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(9);
-  doc.text('B 124 APEX GREEN APARTMENT', pageWidth / 2, 26, { align: 'center' });
-  doc.text('SEC - 8, GT ROAD, SONEPAT - 131001 (HR)', pageWidth / 2, 30, { align: 'center' });
-  doc.text('PH. NO. - 87088 98580', pageWidth / 2, 34, { align: 'center' });
+  doc.text('B 124 APEX GREEN APARTMENT', pageWidth / 2, 24, { align: 'center' });
+  doc.text('SEC - 8, GT ROAD, SONEPAT - 131001 (HR)', pageWidth / 2, 28, { align: 'center' });
+  doc.text('PH. NO. - 87088 98580', pageWidth / 2, 32, { align: 'center' });
+
+  doc.line(margin, 36, pageWidth - margin, 36);
 
   doc.setFontSize(8);
-  doc.text('GSTIN: 06AAICA7330G1Z2', margin, 42);
-  doc.text(`EMAIL: adtraders11922@gmail.com`, pageWidth - margin, 42, { align: 'right' });
-  doc.text('FSSAI NO.: 10421012000122', margin, 46);
+  doc.text('GSTIN: 06AAICA7330G1Z2', margin, 41);
+  doc.text('FSSAI NO.: 10421012000122', margin, 45);
+  doc.text('Email: adtraders11922@gmail.com', pageWidth - margin, 41, { align: 'right' });
 
-  doc.rect(margin, 50, (pageWidth - 2 * margin) / 2 - 2, 28);
-  doc.rect((pageWidth - 2 * margin) / 2 + margin + 2, 50, (pageWidth - 2 * margin) / 2 - 2, 28);
+  /* ================= CUSTOMER BOX ================= */
 
-  doc.setFont('helvetica', 'bold');
-  doc.setFontSize(9);
-  doc.text('TO:', margin + 2, 55);
-  doc.setFont('helvetica', 'normal');
+  const boxTop = 48;
+  const boxHeight = 30;
+  const halfWidth = (pageWidth - 2 * margin) / 2;
+
+  doc.rect(margin, boxTop, halfWidth, boxHeight);
+  doc.rect(margin + halfWidth, boxTop, halfWidth, boxHeight);
+
   doc.setFontSize(8);
+  doc.text('TO:', margin + 3, boxTop + 6);
 
-  const customerLines = doc.splitTextToSize(invoiceData.customer_name, 85);
-  let yPos = 60;
-  customerLines.forEach((line: string) => {
-    doc.text(line, margin + 2, yPos);
-    yPos += 4;
-  });
+  doc.text(invoiceData.customer_name || '', margin + 3, boxTop + 12);
+  doc.text(invoiceData.customer_address || '', margin + 3, boxTop + 18);
+  doc.text(`Phone: ${invoiceData.customer_phone || ''}`, margin + 3, boxTop + 24);
 
-  const addressLines = doc.splitTextToSize(invoiceData.customer_address, 85);
-  addressLines.forEach((line: string) => {
-    doc.text(line, margin + 2, yPos);
-    yPos += 4;
-  });
+  const rightX = margin + halfWidth + 3;
 
-  doc.text(`Phone: ${invoiceData.customer_phone}`, margin + 2, yPos);
-  if (invoiceData.customer_gstin) {
-    doc.text(`GSTIN: ${invoiceData.customer_gstin}`, margin + 2, yPos + 4);
-  }
+  doc.text(`INVOICE NO: ${invoiceData.invoice_number}`, rightX, boxTop + 8);
+  doc.text(`BOXES: ${invoiceData.boxes}`, rightX, boxTop + 16);
+  doc.text(
+    `DATE: ${new Date(invoiceData.invoice_date)
+      .toLocaleDateString('en-GB')
+      .replace(/\//g, '-')}`,
+    rightX,
+    boxTop + 24
+  );
 
-  const rightBoxX = (pageWidth - 2 * margin) / 2 + margin + 4;
-  doc.setFont('helvetica', 'bold');
-  doc.text(`INVOICE NUMBER - ${invoiceData.invoice_number}`, rightBoxX, 55);
-  doc.setFont('helvetica', 'normal');
-  doc.text(`Boxes - ${invoiceData.boxes}`, rightBoxX, 62);
-  doc.text(`DATE - ${new Date(invoiceData.invoice_date).toLocaleDateString('en-GB').replace(/\//g, '-')}`, rightBoxX, 69);
+  /* ================= TABLE ================= */
 
-  const tableStartY = 82;
   const isSGST = invoiceData.tax_type === 'SGST_CGST';
 
-  const headers = [
+  const headers = [[
     'S.NO',
     'PRODUCTS',
     'HSN',
-    'QTY.',
+    'QTY',
     'UNIT PRICE',
-    'NET VALUE'
-  ];
+    'NET VALUE',
+    'SGST+CGST (%)',
+    'IGST (%)',
+    'TAX AMOUNT'
+  ]];
 
-  if (isSGST) {
-    headers.push('SGST +\nCGST (%)');
-    headers.push('IGST (%)');
-  } else {
-    headers.push('SGST +\nCGST (%)');
-    headers.push('IGST (%)');
-  }
+  const rows = invoiceData.items.map((item, i) => [
+    String(i + 1),
+    item.product_name || '',
+    item.hsn || '',
+    String(item.quantity),
+    item.unit_price.toFixed(2),
+    item.net_value.toFixed(2),
+    isSGST ? '5%' : '0%',
+    !isSGST ? '5%' : '0%',
+    item.tax_amount.toFixed(2)
+  ]);
 
-  headers.push('TAX AMOUNT');
-
-  const tableData = invoiceData.items.map((item, index) => {
-    const row = [
-      (index + 1).toString(),
-      item.product_name,
-      item.hsn,
-      item.quantity.toString(),
-      item.unit_price.toFixed(2),
-      item.net_value.toFixed(2)
-    ];
-
-    if (isSGST) {
-      row.push('5');
-      row.push('');
-    } else {
-      row.push('');
-      row.push('5');
-    }
-
-    row.push(item.tax_amount.toFixed(2));
-    return row;
-  });
-
-  while (tableData.length < 10) {
-    tableData.push(['', '', '', '', '', '', '', '', '']);
+  // 🔹 Ensure minimum 10 rows
+  while (rows.length < 10) {
+    rows.push(['', '', '', '', '', '', '', '', '']);
   }
 
   autoTable(doc, {
-    startY: tableStartY,
-    head: [headers],
-    body: tableData,
+    startY: boxTop + boxHeight + 5,
+    head: headers,
+    body: rows,
+    columnStyles: {
+      0: { cellWidth: 14 },
+      1: { cellWidth: 'auto' },
+      2: { cellWidth: 'auto' },
+      3: { cellWidth: 12 },
+      4: { cellWidth: 18 },
+      5: { cellWidth: 18 },
+      6: { cellWidth: 18 },
+      7: { cellWidth: 14 },
+      8: { cellWidth: 20 }
+    },
     theme: 'grid',
     styles: {
       fontSize: 8,
-      cellPadding: 2,
+      cellPadding: 3,
       lineColor: [0, 0, 0],
-      lineWidth: 0.1
+      lineWidth: 0.2
     },
     headStyles: {
-      fillColor: [255, 255, 255],
+      fillColor: false, // No color
       textColor: [0, 0, 0],
       fontStyle: 'bold',
       halign: 'center'
     },
-    columnStyles: {
-      0: { cellWidth: 12, halign: 'center' },
-      1: { cellWidth: 50, halign: 'left' },
-      2: { cellWidth: 20, halign: 'center' },
-      3: { cellWidth: 12, halign: 'center' },
-      4: { cellWidth: 22, halign: 'right' },
-      5: { cellWidth: 22, halign: 'right' },
-      6: { cellWidth: 15, halign: 'center' },
-      7: { cellWidth: 15, halign: 'center' },
-      8: { cellWidth: 22, halign: 'right' }
-    },
-    margin: { left: margin, right: margin }
+    didParseCell: (data: any) => {
+      if (data.section === 'body') {
+        data.cell.styles.fontStyle = 'bold'; // Bold products
+      }
+    }
   });
 
-  const finalY = (doc as any).lastAutoTable.finalY;
+  const table = (doc as any).lastAutoTable;
+  const tableEndY = table.finalY + 10;
+
+  /* ================= BANK DETAILS ================= */
 
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(9);
-  doc.text('BANK DETAILS', margin, finalY + 8);
-  doc.setFont('helvetica', 'normal');
-  doc.setFontSize(8);
-  doc.text('State Bank Of India', margin, finalY + 13);
-  doc.text('AC No. 41687909184', margin, finalY + 17);
-  doc.text('IFSC CODE : SBIN0061721', margin, finalY + 21);
-  doc.text('Qmagh City, Sonepat', margin, finalY + 25);
-
-  const totalsX = pageWidth - margin - 60;
-  doc.setFont('helvetica', 'bold');
-  doc.text('SUB TOTAL', totalsX, finalY + 8);
-  doc.setFont('helvetica', 'normal');
-  doc.text(invoiceData.sub_total.toFixed(2), totalsX + 40, finalY + 8, { align: 'right' });
-
-  doc.setFont('helvetica', 'bold');
-  const taxLabel = isSGST ? 'TOTAL TAX AMOUNT (SGST+CGST)' : 'TOTAL TAX AMOUNT (IGST)';
-  doc.text(taxLabel, totalsX, finalY + 13);
-  doc.setFont('helvetica', 'normal');
-  doc.text(invoiceData.total_tax.toFixed(2), totalsX + 40, finalY + 13, { align: 'right' });
-
-  doc.setFont('helvetica', 'bold');
-  doc.setFontSize(9);
-  doc.rect(totalsX - 2, finalY + 16, 62, 7);
-  doc.text('GRAND TOTAL', totalsX, finalY + 21);
-  doc.text(`₹ ${invoiceData.grand_total.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, totalsX + 40, finalY + 21, { align: 'right' });
+  doc.text('BANK DETAILS', margin, tableEndY);
+  doc.text('State Bank Of India', margin, tableEndY + 6);
 
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(8);
-  doc.text('For A.D. Traders', pageWidth - margin - 50, finalY + 35);
+  doc.text('A/C No: 41687909184', margin, tableEndY + 11);
+  doc.text('IFSC: SBIN0061721', margin, tableEndY + 16);
+  doc.text('Qmagh City, Sonepat', margin, tableEndY + 21);
+
+  /* ================= ELEGANT TOTAL SECTION ================= */
+
+  const totalsX = pageWidth - margin - 70;
+  const lineSpacing = 7;
+
+  doc.setFont('helvetica', 'bold');
+  doc.text('SUB TOTAL', totalsX, tableEndY);
+  doc.setFont('helvetica', 'normal');
+  doc.text(invoiceData.sub_total.toFixed(2), pageWidth - margin, tableEndY, { align: 'right' });
+
+  doc.setFont('helvetica', 'bold');
+  doc.text(
+    isSGST ? 'TOTAL TAX (SGST+CGST)' : 'TOTAL TAX (IGST)',
+    totalsX,
+    tableEndY + lineSpacing
+  );
+  doc.setFont('helvetica', 'normal');
+  doc.text(invoiceData.total_tax.toFixed(2), pageWidth - margin, tableEndY + lineSpacing, { align: 'right' });
+
+  // Separator line
+  doc.line(totalsX, tableEndY + lineSpacing + 4, pageWidth - margin, tableEndY + lineSpacing + 4);
+
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(11);
+  doc.text('GRAND TOTAL', totalsX, tableEndY + lineSpacing + 11);
+
+  doc.setFontSize(11);
+  doc.text(
+    `Rs. ${invoiceData.grand_total.toLocaleString('en-IN', {
+      minimumFractionDigits: 2
+    })}`,
+    pageWidth - margin,
+    tableEndY + lineSpacing + 11,
+    { align: 'right' }
+  );
+
+  /* ================= SIGNATURE ================= */
+
+  doc.setFontSize(8);
+  doc.setFont('helvetica', 'normal');
+  doc.text('For A.D. Traders', pageWidth - margin - 50, tableEndY + 35);
+
   doc.setFont('helvetica', 'italic');
-  doc.text('Authorised Signatory', pageWidth - margin - 50, finalY + 48);
+  doc.text('Authorised Signatory', pageWidth - margin - 50, tableEndY + 45);
 
   doc.save(`Invoice-${invoiceData.invoice_number}.pdf`);
 };
