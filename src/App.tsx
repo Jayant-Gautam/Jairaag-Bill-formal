@@ -67,8 +67,8 @@ function Home(HomeProps: HomePropsType) {
               onChange={(e) => handleTitleChange(e)}
               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-green-500 focus:border-transparent text-sm"
             >
-              <option value={0}>Jairaag Traders</option>
-              <option value={1}>Jairaag Traders - GSTIN: 27AAQFJ5678K1ZP</option>
+              <option value={0}>M/s A.D. TRADERS</option>
+              <option value={1}>JAIRAAG HERBALS</option>
             </select>
           </div>
 
