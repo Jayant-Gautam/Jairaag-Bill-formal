@@ -10,6 +10,7 @@ export interface Product {
   name: string;
   hsn: string;
   default_price: number;
+  stock_available: number;
 }
 
 export interface InvoiceItem {

@@ -3,7 +3,19 @@ import { Plus, Trash2, FileDown } from 'lucide-react';
 import { supabase, Product, Invoice, InvoiceItem, CustomerAddress } from '../lib/supabase';
 import { generateInvoicePDF } from '../utils/pdfGenerator';
 
-export default function InvoiceForm() {
+interface invoicePropsType {
+  title : string,
+  gstin: string,
+  bankingDetails: {
+    bankName: string;
+    accountNumber: string;
+    ifsc: string;
+    bankAddress: string;
+  },
+  fssai: string
+}
+
+export default function InvoiceForm(invoiceProps: invoicePropsType) {
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -81,6 +93,18 @@ export default function InvoiceForm() {
       const product = products.find(p => p.id === value);
       if (product) {
         newItems[index].unitPrice = product.default_price;
+        // Cap quantity to available stock
+        if (newItems[index].quantity > (product.stock_available || 0)) {
+          newItems[index].quantity = product.stock_available || 0;
+        }
+      }
+    }
+
+    if (field === 'quantity') {
+      const product = products.find(p => p.id === newItems[index].productId);
+      if (product && value as number > (product.stock_available || 0)) {
+        value = product.stock_available || 0;
+        newItems[index].quantity = value;
       }
     }
 
@@ -183,7 +207,26 @@ export default function InvoiceForm() {
 
       if (invoiceError) throw invoiceError;
 
-      generateInvoicePDF(invoiceData);
+      // Update stock for each product
+      for (const item of items) {
+        if (item.productId && item.quantity > 0) {
+          const product = products.find(p => p.id === item.productId);
+          if (product) {
+            const newStock = product.stock_available - item.quantity;
+            const { error: stockError } = await supabase
+              .from('products')
+              .update({ stock_available: newStock })
+              .eq('id', item.productId);
+
+            if (stockError) throw stockError;
+          }
+        }
+      }
+
+      generateInvoicePDF({ invoiceData, invoiceProps });
+
+      // Reload products to update stock
+      loadProducts();
 
       const q = await supabase
         .from('customer_address')
@@ -264,7 +307,7 @@ export default function InvoiceForm() {
       <div className="max-w-4xl mx-auto">
         <div className="bg-white rounded-lg shadow-lg p-6">
           <div className="mb-8 text-center border-b pb-4">
-            <h1 className="text-2xl font-bold text-gray-900">A.D. TRADERS</h1>
+            <h1 className="text-2xl font-bold text-gray-900">{invoiceProps.title}</h1>
             <p className="text-sm text-gray-600 mt-1">Invoice Generator</p>
           </div>
 
@@ -386,14 +429,22 @@ export default function InvoiceForm() {
                         ))}
                       </select>
 
-                      <input
-                        type="number"
-                        value={item.quantity}
-                        onChange={(e) => updateItem(index, 'quantity', parseInt(e.target.value) || 0)}
-                        placeholder="Qty"
-                        min="1"
-                        className="px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-green-500 focus:border-transparent text-sm"
-                      />
+                      <div className="flex flex-col">
+                        <input
+                          type="number"
+                          value={item.quantity}
+                          onChange={(e) => updateItem(index, 'quantity', parseInt(e.target.value) || 0)}
+                          placeholder="Qty"
+                          min="1"
+                          max={products.find(p => p.id === item.productId)?.stock_available || undefined}
+                          className="px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-green-500 focus:border-transparent text-sm"
+                        />
+                        {item.productId && (
+                          <span className="text-xs text-gray-500 mt-1">
+                            Available: {products.find(p => p.id === item.productId)?.stock_available || 0}
+                          </span>
+                        )}
+                      </div>
 
                       <input
                         type="number"

@@ -2,7 +2,24 @@ import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { Invoice } from '../lib/supabase';
 
-export const generateInvoicePDF = (invoiceData: Invoice) => {
+interface invoicePropsType {
+  title: string;
+  gstin: string;
+  bankingDetails: {
+    bankName: string;
+    accountNumber: string;
+    ifsc: string;
+    bankAddress: string;
+  };
+  fssai: string;
+}
+
+interface PDFGeneratorPropsType {
+  invoiceData: Invoice;
+  invoiceProps: invoicePropsType;
+}
+
+export const generateInvoicePDF = ({ invoiceData, invoiceProps }: PDFGeneratorPropsType) => {
   const doc = new jsPDF({
     orientation: 'portrait',
     unit: 'mm',
@@ -16,7 +33,7 @@ export const generateInvoicePDF = (invoiceData: Invoice) => {
 
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(14);
-  doc.text('M/s A.D. TRADERS', pageWidth / 2, 18, { align: 'center' });
+  doc.text(invoiceProps.title, pageWidth / 2, 18, { align: 'center' });
 
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(9);
@@ -27,8 +44,8 @@ export const generateInvoicePDF = (invoiceData: Invoice) => {
   doc.line(margin, 36, pageWidth - margin, 36);
 
   doc.setFontSize(8);
-  doc.text('GSTIN: 06ACAFA3701G1Z2', margin, 41);
-  doc.text('FSSAI NO.: 20823020000311', margin, 45);
+  doc.text(`GSTIN: ${invoiceProps.gstin}`, margin, 41);
+  doc.text(`FSSAI NO.: ${invoiceProps.fssai}`, margin, 45);
   doc.text('Email: adtraders112023@gmail.com', pageWidth - margin, 41, { align: 'right' });
 
   /* ================= CUSTOMER BOX ================= */
@@ -135,13 +152,13 @@ export const generateInvoicePDF = (invoiceData: Invoice) => {
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(9);
   doc.text('BANK DETAILS', margin, tableEndY);
-  doc.text('State Bank Of India', margin, tableEndY + 6);
+  doc.text(invoiceProps.bankingDetails.bankName, margin, tableEndY + 6);
 
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(8);
-  doc.text('A/C No: 41687809184', margin, tableEndY + 11);
-  doc.text('IFSC: SBIN0061721', margin, tableEndY + 16);
-  doc.text('Omaxe City, Sonepat', margin, tableEndY + 21);
+  doc.text(invoiceProps.bankingDetails.accountNumber, margin, tableEndY + 11);
+  doc.text(`IFSC: ${invoiceProps.bankingDetails.ifsc}`, margin, tableEndY + 16);
+  doc.text(invoiceProps.bankingDetails.bankAddress, margin, tableEndY + 21);
 
   /* ================= ELEGANT TOTAL SECTION ================= */
 
