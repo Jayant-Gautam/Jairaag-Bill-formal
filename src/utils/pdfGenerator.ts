@@ -22,14 +22,14 @@ export const generateInvoicePDF = (invoiceData: Invoice) => {
   doc.setFontSize(9);
   doc.text('B 124 APEX GREEN APARTMENT', pageWidth / 2, 24, { align: 'center' });
   doc.text('SEC - 8, GT ROAD, SONEPAT - 131001 (HR)', pageWidth / 2, 28, { align: 'center' });
-  doc.text('PH. NO. - 87088 98580', pageWidth / 2, 32, { align: 'center' });
+  doc.text('PH. NO. - 87086 98580', pageWidth / 2, 32, { align: 'center' });
 
   doc.line(margin, 36, pageWidth - margin, 36);
 
   doc.setFontSize(8);
-  doc.text('GSTIN: 06AAICA7330G1Z2', margin, 41);
-  doc.text('FSSAI NO.: 10421012000122', margin, 45);
-  doc.text('Email: adtraders11922@gmail.com', pageWidth - margin, 41, { align: 'right' });
+  doc.text('GSTIN: 06ACAFA3701G1Z2', margin, 41);
+  doc.text('FSSAI NO.: 20823020000311', margin, 45);
+  doc.text('Email: adtraders112023@gmail.com', pageWidth - margin, 41, { align: 'right' });
 
   /* ================= CUSTOMER BOX ================= */
 
@@ -139,9 +139,9 @@ export const generateInvoicePDF = (invoiceData: Invoice) => {
 
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(8);
-  doc.text('A/C No: 41687909184', margin, tableEndY + 11);
+  doc.text('A/C No: 41687809184', margin, tableEndY + 11);
   doc.text('IFSC: SBIN0061721', margin, tableEndY + 16);
-  doc.text('Qmagh City, Sonepat', margin, tableEndY + 21);
+  doc.text('Omaxe City, Sonepat', margin, tableEndY + 21);
 
   /* ================= ELEGANT TOTAL SECTION ================= */
 

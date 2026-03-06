@@ -210,7 +210,7 @@ export default function InvoiceForm() {
       setCustomerPhone('');
       setCustomerGstin('');
       setBoxes('');
-      setItems([{ productId: '', quantity: 1, unitPrice: 0 }]);
+      // setItems([{ productId: '', quantity: 1, unitPrice: 0 }]);
     } catch (error) {
       console.error('Error generating invoice:', error);
       alert('Error generating invoice. Please try again.');
